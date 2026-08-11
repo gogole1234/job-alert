@@ -1,38 +1,48 @@
-import { chromium, Page } from 'playwright';
-import * as fs from 'fs';
-import * as path from 'path';
-import { CompanyConfig, JobListing } from './types';
+import { Page } from 'playwright';
+import { CompanyConfig, JobListing, ScraperCompanyConfig } from './types';
+import { fetchGreenhouseJobs } from './scrapers/greenhouse';
 
 // Define the target company career pages you want to track
 export const TARGET_COMPANIES: CompanyConfig[] = [
     {
         name: 'Apono',
+        provider: 'comeet',
         url: 'https://www.comeet.com/jobs/apono/1B.00A',
-        cardSelector: 'a[href*="/jobs/"]',
-        titleSelector: '',
-        locationSelector: '',
-        linkSelector: ''
+        cardSelector: 'a[href*="/jobs/"]'
     },
     {
         name: 'Guardio',
+        provider: 'comeet',
         url: 'https://www.comeet.com/jobs/guardio/57.000',
-        cardSelector: 'a[href*="/jobs/"]',
-        titleSelector: '',
-        locationSelector: '',
-        linkSelector: ''
+        cardSelector: 'a[href*="/jobs/"]'
     },
     {
         name: 'Pango',
+        provider: 'comeet',
         url: 'https://www.comeet.com/jobs/pango/59.002',
-        cardSelector: 'a[href*="/jobs/"]',
-        titleSelector: '',
-        locationSelector: '',
-        linkSelector: ''
+        cardSelector: 'a[href*="/jobs/"]'
+    },
+    {
+        name: 'Tenable',
+        provider: 'greenhouse',
+        boardToken: 'tenableinc',
     }
 ];
 
+export async function getJobsForCompany(page: Page, config: CompanyConfig): Promise<JobListing[]> {
+  switch (config.provider) {
+    case 'greenhouse':
+      // TypeScript automatically knows config is ApiCompanyConfig
+      return await fetchGreenhouseJobs(config.boardToken, config.name);
+    case 'comeet':
+    case 'custom':
+      return await scrapeCompanyJobs(page, config);
+    default:
+      throw new Error(`Unhandled provider type`);
+  }
+}
 
-export async function scrapeCompanyJobs(page: Page, config: CompanyConfig): Promise<JobListing[]> {
+export async function scrapeCompanyJobs(page: Page, config: ScraperCompanyConfig): Promise<JobListing[]> {
     const startTime = Date.now();
     console.log(`\n==================================================`);
     console.log(`[🚀 START] Scraping target: ${config.name}`);
@@ -46,8 +56,11 @@ export async function scrapeCompanyJobs(page: Page, config: CompanyConfig): Prom
         }
     });
 
+    // ⚡️ BLOCK UNNECESSARY ASSETS TO SPEED UP NAVIGATION
+    await page.route('**/*.{png,jpg,jpeg,svg,gif,webp,css,woff,woff2}', (route) => route.abort());
+
     console.log(`[⏳] Navigating to page...`);
-    await page.goto(config.url, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    await page.goto(config.url, { waitUntil: 'commit', timeout: 60000 });
     console.log(`[✓] Page loaded successfully.`);
 
     const possibleSelectors = [
@@ -161,35 +174,3 @@ export async function scrapeCompanyJobs(page: Page, config: CompanyConfig): Prom
 
     return listings;
 }
-
-async function main() {
-    const browser = await chromium.launch({
-        headless: true // Set to false if you want to inspect browser actions visually
-    });
-
-    const context = await browser.newContext({
-        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-    });
-
-    const page = await context.newPage();
-    const allJobs: JobListing[] = [];
-
-    for (const company of TARGET_COMPANIES) {
-        try {
-            const jobs = await scrapeCompanyJobs(page, company);
-            console.log(`[✓] Scraped ${jobs.length} jobs from ${company.name}`);
-            allJobs.push(...jobs);
-        } catch (err) {
-            console.error(`[X] Error scraping ${company.name}:`, err);
-        }
-    }
-
-    await browser.close();
-
-    // Save outputs to file
-    const outputPath = path.join(__dirname, '../jobs.json');
-    fs.writeFileSync(outputPath, JSON.stringify(allJobs, null, 2));
-    console.log(`\n🎉 Finished! Saved ${allJobs.length} total jobs to ${outputPath}`);
-}
-
-// main().catch(console.error);
