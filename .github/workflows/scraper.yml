@@ -30,6 +30,9 @@ jobs:
         env:
           # Passes MONGO_URI secret from GitHub repository settings to process.env
           MONGO_URI: ${{ secrets.MONGO_URI }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: npx playwright test
 
       - name: Upload Test Report Artifacts (On Failure)
