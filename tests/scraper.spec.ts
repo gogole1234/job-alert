@@ -7,27 +7,29 @@ import { TARGET_COMPANIES } from '../src/config';
 test.describe('Company Job Scraper Pipeline', () => {
   const mongoUri = process.env.MONGO_URI;
 
+  test.beforeAll(async () => {
+    expect(mongoUri, 'MONGO_URI environment variable must be set').toBeTruthy();
+  });
+
   for (const company of TARGET_COMPANIES) {
     test(`Scrape jobs for: ${company.name}`, async ({ page }) => {
-      // 1. Ensure DB URI is present before running
-      expect(mongoUri, 'MONGO_URI environment variable must be set').toBeTruthy();
-
-      // 2. Route job collection based on provider (API or Playwright Browser)
+      // 1. Route job collection based on provider (API or Playwright Browser)
       const jobs: JobListing[] = await getJobsForCompany(page, company);
 
       console.log(`[✓] ${company.name} (${company.provider}): Found ${jobs.length} R&D jobs.`);
 
-      // Sanity assertion: Ensure job extraction didn't return empty due to broken selectors/API errors
-      expect(jobs.length, `Expected to find at least one position for ${company.name}`).toBeGreaterThan(0);
+      // 2. Validate extracted structure ONLY IF jobs exist
+      if (jobs.length > 0) {
+        jobs.forEach((job) => {
+          expect(job.title, `Job title should be defined for ${company.name}`).not.toBe('N/A');
+          expect(job.title.length, `Job title too short for ${company.name}`).toBeGreaterThan(2);
+          expect(job.url, `Invalid URL format for ${company.name}`).toContain('http');
+        });
+      } else {
+        console.log(`[ℹ️ INFO] ${company.name} currently has 0 open positions. Continuing pipeline to maintain DB state...`);
+      }
 
-      // Verify structure of parsed jobs
-      jobs.forEach((job) => {
-        expect(job.title).not.toBe('N/A');
-        expect(job.title.length).toBeGreaterThan(2);
-        expect(job.url).toContain('http');
-      });
-
-      // 3. Sync scraped positions for this company to MongoDB and output summary diff
+      // 3. Sync scraped positions (even if empty!) to track state and handle soft deletes for closed roles
       const { newJobs, closedJobsCount } = await syncJobsToDb(jobs, mongoUri!);
 
       console.log(
