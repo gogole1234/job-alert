@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test:notify": "tsx src/scripts/testNotifications.ts",
+    "test:notify": "tsx scripts/testNotifications.ts",
     "test:ui": "npx playwright test --ui",
     "start": "ts-node src/index.ts",
     "build": "tsc"

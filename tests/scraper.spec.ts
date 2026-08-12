@@ -1,7 +1,8 @@
 import { test, expect } from '@playwright/test';
 import { JobListing } from '../src/types';
-import { getJobsForCompany, TARGET_COMPANIES } from '../src/index';
+import { getJobsForCompany } from '../src/index';
 import { syncJobsToDb } from '../src/db/syncJobs';
+import { TARGET_COMPANIES } from '../src/config';
 
 test.describe('Company Job Scraper Pipeline', () => {
   const mongoUri = process.env.MONGO_URI;

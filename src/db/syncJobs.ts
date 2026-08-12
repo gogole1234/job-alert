@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { JobModel } from './Job';
+import { JobModel } from './JobSchema';
 import { JobListing } from '../types';
 import { sendNotifications } from '../utils/notifications';
 
