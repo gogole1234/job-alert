@@ -2,7 +2,7 @@ name: Scheduled Job Scraper & DB Sync
 
 on:
   schedule:
-    - cron: '20 12 * * *'
+    - cron: '18 12 * * *'
   workflow_dispatch:
 
 jobs:
